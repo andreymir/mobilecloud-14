@@ -1,15 +1,19 @@
-## This Assignment is in Beta
+# Assignment 1 Covering Weeks 1-3
 
-This is a beta preview of the assignment. The official version will be released soon, 
-but will not change substantially. Our plan is to keep the core requirements and code 
-base the same -- ideally there will be no changes at all. The beta release may have bugs 
-and/or other issues that will be resolved before the final version is released. You 
-are welcome to go ahead and complete the assignment. However, since this assignment 
-is in beta, you may be need to update your assignment or resubmit it for regrading 
-after the final version is released. 
+## Running the Application
 
-Please post any bugs or ambiguities that you find in the Assignment 1 forum
-[https://class.coursera.org/mobilecloud-001/forum/list?forum_id=10010].
+__You do not use "jettyRun" to launch this application. Please read these instructions__
+
+To run the application:
+
+Right-click on the Application class in the org.magnum.dataup
+package, Run As->Java Application
+
+To stop the application:
+
+Open the Eclipse Debug Perspective (Window->Open Perspective->Debug), right-click on
+the application in the "Debug" view (if it isn't open, Window->Show View->Debug) and
+select Terminate
 
 ## Overview
 
@@ -62,7 +66,9 @@ POST /video
      was stored along with any updates to that object made by the server. 
    - **_The server should generate a unique identifier for the Video
      object and assign it to the Video by calling its setId(...)
-     method._** The returned Video JSON should include this server-generated
+     method._** 
+   - No video should have ID = 0. All IDs should be > 0.
+   - The returned Video JSON should include this server-generated
      identifier so that the client can refer to it when uploading the
      binary mpeg video content for the Video.
    - The server should also generate a "data url" for the
@@ -79,9 +85,9 @@ POST /video/{id}/data
      Video. A client MUSTcreate* a Video first by sending a POST to /video
      and getting the identifier for the newly created Video object before
      sending a POST to /video/{id}/data. 
-   - The endpoint should return VideoStatus.READY if the request succeeds and
-     the appropriate HTTP error status otherwise. VideoStatus.PROCESSING is
-     not used in this assignment but is present in VideoStatus.
+   - The endpoint should return a VideoStatus object with state=VideoState.READY
+     if the request succeeds and the appropriate HTTP error status otherwise.
+     VideoState.PROCESSING is not used in this assignment but is present in VideoState.
    - Rather than a PUT request, a POST is used because, by default, Spring 
      does not support a PUT with multipart data due to design decisions in the
      Commons File Upload library: https://issues.apache.org/jira/browse/FILEUPLOAD-197
@@ -119,6 +125,38 @@ GET /video/{id}/data
  
  You should not modify any of the code in Video, VideoStatus, VideoSvcApi, AutoGrading,
  or AutoGradingTest. 
+
+## Testing Your Implementation
+
+To test your solution, first run the application as described above. Once your application
+is running, you can right-click on the AutoGradingTest->Run As->JUnit Test to launch the
+test. Eclipse will report which tests pass or fail.
+
+To get an estimated score for your solution, right-click on AutoGrading (not AutoGradingTest) and
+Run As->Java Application. The AutoGrading application will run AutoGradingTest and then print a
+summary of the test results and your score to the Eclipse Console (Window->Show View->Console). 
+The AutoGrading application will also zip all of your source code into a submission package that
+you can submit to Coursera to receive your official grade. Note: each time that you run AutoGrading
+it will create a separate zip file. Make sure that you choose the right zip file when submitting 
+your assignment! All of the submission zip files are placed in the coursera-submission folder.
+
+## Submitting Your Assignment
+
+To submit your assignment, you must first run the AutoGrading application as described in the previous
+step to create your submission zip file. Make sure that you take note of the name of the submission
+package that is printed in the console to ensure that you submit the correct zip file. You should
+submit the submission package that is generated in the coursera-submission folder as the 
+"Output Submission". Leave the "Additional Submission" empty. 
+
+After submitting  your solution to Coursera, your submission package will be sent to the auto-grading
+servers. It may take a few minutes for a score to be assigned to your submission. Once the submission
+is graded, a detailed score will be registered with Coursera.
+
+Note: locally running the AutoGrading application DOES NOT submit your solution to Coursera and will
+not be counted as a valid submission. The grade that you see when running the AutoGrading application
+is an estimate of your grade only. You must correctly submit the solution to Coursera to receive an
+official grade.
+
  
 ## Provided Code
 
@@ -169,9 +207,33 @@ GET /video/{id}/data
 - A valid solution is going to have at least one class annotated with @Controller
 - There will probably need to be at least 4 different methods annotated with @RequestMapping to
   implement the HTTP API described
+- Any Controller method can take an HttpServletRequest or HttpServletResponse as parameters to 
+  gain low-level access/control over the HTTP messages. Spring will automatically fill in these
+  parameters when your Controller's method is invoked:
+```java
+        ...
+        @RequestMapping("/some/path/{id}")
+        public MyObject doSomething(
+                   @PathVariable("id") String id, 
+                   @RequestParam("something") String data,
+                   HttpServletResponse response) {
+         
+            // Maybe you want to set the status code with the response
+            // or write some binary data to an OutputStream obtained from
+            // the HttpServletResponse object
+            ....       
+        }
+        
+```
+- The IDs must be of type long. The tests send long values to the server and will generate
+  400 response codes if you use an int.
+- If you get an error 400, you have incorrectly specified the parameter values that the method
+  should accept and their mapping to HTTP parameters.
 - One of the Controller methods that is annotated with @RequestMapping is probably going to need 
   to take an HttpServletResponse object as a parameter and use this object to write out binary data 
   that should be sent to the client. 
+- There are multiple ways to implement most pieces of the application. Any solution that passes
+  the tests will be given full credit.
 - None of your Controllers or other classes should "implement VideoSvcApi" -- which is an interface
   that is only used to create a Retrofit client. None of your classes should look like this:
 ```java
@@ -197,17 +259,7 @@ GET /video/{id}/data
 		   return base;
 		}
 ```
-- One way to generate a unique ID for each video is to store them in a list and assign
-  them an ID based on their index in the list, similar to this:
-```java
-    private List<Video> videos = ...
-
-  	public synchronized int addAndGetId(Video v) {
-		videos.add(v);
-		return videos.size() - 1;
-	}
-```
-- Another approach might be to use an AtomicLong similar to this:
+- One way to generate a unique ID for each video is to use an AtomicLong similar to this:
 ```java
     private static final AtomicLong currentId = new AtomicLong(0L);
 	
@@ -225,50 +277,6 @@ GET /video/{id}/data
 		}
 	}
 ```
-
-## Running the Application
-
-To run the application:
-
-Right-click on the Application class in the org.magnum.mobilecloud.video
-package, Run As->Java Application
-
-To stop the application:
-
-Open the Eclipse Debug Perspective (Window->Open Perspective->Debug), right-click on
-the application in the "Debug" view (if it isn't open, Window->Show View->Debug) and
-select Terminate
-
-## Testing Your Implementation
-
-To test your solution, first run the application as described above. Once your application
-is running, you can right-click on the AutoGradingTest->Run As->JUnit Test to launch the
-test. Eclipse will report which tests pass or fail.
-
-To get an estimated score for your solution, right-click on AutoGrading (not AutoGradingTest) and
-Run As->Java Application. The AutoGrading application will run AutoGradingTest and then print a
-summary of the test results and your score to the Eclipse Console (Window->Show View->Console). 
-The AutoGrading application will also zip all of your source code into a submission package that
-you can submit to Coursera to receive your official grade. Note: each time that you run AutoGrading
-it will create a separate zip file. Make sure that you choose the right zip file when submitting 
-your assignment! All of the submission zip files are placed in the coursera-submission folder.
-
-## Submitting Your Assignment
-
-To submit your assignment, you must first run the AutoGrading application as described in the previous
-step to create your submission zip file. Make sure that you take note of the name of the submission
-package that is printed in the console to ensure that you submit the correct zip file. You should
-submit the submission package that is generated in the coursera-submission folder as the 
-"Output Submission". Leave the "Additional Submission" empty. 
-
-After submitting  your solution to Coursera, your submission package will be sent to the auto-grading
-servers. It may take a few minutes for a score to be assigned to your submission. Once the submission
-is graded, a detailed score will be registered with Coursera.
-
-Note: locally running the AutoGrading application DOES NOT submit your solution to Coursera and will
-not be counted as a valid submission. The grade that you see when running the AutoGrading application
-is an estimate of your grade only. You must correctly submit the solution to Coursera to receive an
-official grade.
 
 
 
